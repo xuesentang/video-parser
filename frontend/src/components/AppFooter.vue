@@ -4,12 +4,12 @@
       <!-- 底部关键词友好描述 -->
       <div class="text-center mb-6">
         <p class="text-sm text-text-secondary leading-relaxed max-w-3xl mx-auto">
-          <strong>SaveAny</strong> — 免费在线万能视频下载器，支持
-          <a href="#features" class="text-primary hover:underline" title="YouTube视频下载">YouTube</a>、
-          <a href="#features" class="text-primary hover:underline" title="Bilibili视频下载">Bilibili</a>、
-          <a href="#features" class="text-primary hover:underline" title="抖音视频下载">抖音</a>、
-          <a href="#features" class="text-primary hover:underline" title="TikTok视频下载">TikTok</a>
-          等 1800+ 平台视频下载。提供
+          <strong>SaveAny</strong> — 免费在线万能视频解析器，支持
+          <a href="#features" class="text-primary hover:underline" title="YouTube视频解析">YouTube</a>、
+          <a href="#features" class="text-primary hover:underline" title="Bilibili视频解析">Bilibili</a>、
+          <a href="#features" class="text-primary hover:underline" title="抖音视频解析">抖音</a>、
+          <a href="#features" class="text-primary hover:underline" title="TikTok视频解析">TikTok</a>
+          等 1800+ 平台视频解析。提供
           <a href="#features" class="text-primary hover:underline" title="AI视频总结功能">AI 视频总结</a>、思维导图生成、字幕下载等智能功能。
         </p>
       </div>

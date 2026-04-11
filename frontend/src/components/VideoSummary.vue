@@ -44,9 +44,9 @@
             <!-- 免费用户剩余次数提示 -->
             <div v-if="quotaInfo && quotaInfo.remaining >= 0 && !loading" class="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
               <span class="text-sm text-blue-700">
-                今日剩余 AI 总结次数：<strong>{{ quotaInfo.remaining }}</strong> / {{ quotaInfo.limit }}
+                剩余使用次数：<strong>{{ quotaInfo.remaining }}</strong> / {{ quotaInfo.limit }}
               </span>
-              <button v-if="quotaInfo.remaining <= 1" @click="emit('need-vip')" class="text-xs font-medium text-primary hover:underline cursor-pointer">
+              <button v-if="quotaInfo.remaining <= 5" @click="emit('need-vip')" class="text-xs font-medium text-primary hover:underline cursor-pointer">
                 升级 VIP 无限使用
               </button>
             </div>
@@ -647,6 +647,12 @@ function handleClickOutside(e) {
 const quotaInfo = ref(null)
 
 async function startSummarize() {
+  // 检查用户是否登录
+  if (!props.user) {
+    emit('need-login')
+    return
+  }
+
   loading.value = true
   summaryText.value = ''
   mindmapMarkdown.value = ''
@@ -698,6 +704,11 @@ async function startSummarize() {
     })
   } catch (err) {
     loading.value = false
+    // 如果是401错误，提示登录
+    if (err.message && err.message.includes('401')) {
+      emit('need-login')
+      return
+    }
     alert('总结请求失败: ' + err.message)
   }
 }

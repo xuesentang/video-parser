@@ -3,7 +3,7 @@
     <div class="max-w-5xl mx-auto px-4 sm:px-6">
       <div class="text-center mb-12">
         <h2 id="howto-heading" class="text-2xl sm:text-3xl font-bold text-text-primary mb-3">
-          如何使用 <span class="text-primary">SaveAny</span> 下载视频
+          如何使用 <span class="text-primary">SaveAny</span> 解析视频
         </h2>
         <p class="text-text-secondary text-base max-w-xl mx-auto">
           只需 3 步，即可免费下载 YouTube、Bilibili、抖音等 1800+ 平台的视频
@@ -27,7 +27,7 @@
 
       <div class="mt-10 text-center">
         <p class="text-sm text-text-muted">
-          全程无需注册登录，手机浏览器也能操作。更新于 2026 年 3 月。
+          登录后即可使用全部功能，手机浏览器也能操作。更新于 2026 年 3 月。
         </p>
       </div>
     </div>
@@ -39,7 +39,7 @@ const steps = [
   {
     number: 1,
     title: '复制视频链接',
-    desc: '在 YouTube、Bilibili、抖音等平台上找到想要下载的视频，复制视频的分享链接或地址栏 URL。',
+    desc: '在 YouTube、Bilibili、抖音等平台上找到想要解析的视频，复制视频的分享链接或地址栏 URL。',
   },
   {
     number: 2,

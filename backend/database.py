@@ -27,6 +27,10 @@ def get_db():
         conn.close()
 
 
+VIP_EMAIL = "18300618398@163.com"
+NORMAL_USER_USAGE_LIMIT = 20
+
+
 def init_db():
     """初始化数据库表结构"""
     with get_db() as conn:
@@ -37,6 +41,7 @@ def init_db():
                 password_hash TEXT NOT NULL,
                 is_vip INTEGER DEFAULT 0,
                 vip_expire_at TEXT,
+                usage_count INTEGER DEFAULT 0,
                 daily_summary_count INTEGER DEFAULT 0,
                 last_summary_date TEXT,
                 created_at TEXT DEFAULT (datetime('now')),
@@ -65,6 +70,18 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_orders_stripe_session_id ON orders(stripe_session_id);
         """)
 
+        # 迁移：如果 usage_count 字段不存在，则添加
+        cursor = conn.execute("PRAGMA table_info(users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "usage_count" not in columns:
+            conn.execute("ALTER TABLE users ADD COLUMN usage_count INTEGER DEFAULT 0")
+
+        # 确保 VIP 用户（指定邮箱）拥有永久 VIP 权限
+        conn.execute(
+            "UPDATE users SET is_vip = 1, vip_expire_at = ? WHERE email = ? AND (is_vip = 0 OR vip_expire_at IS NULL)",
+            ("2099-12-31T23:59:59", VIP_EMAIL),
+        )
+
 
 FREE_DAILY_SUMMARY_LIMIT = 3
 
@@ -82,46 +99,80 @@ def get_user_by_id(user_id: int) -> dict | None:
 
 
 def create_user(email: str, password_hash: str) -> dict:
+    """创建用户，VIP邮箱自动获得永久VIP权限"""
+    is_vip = 1 if email.lower() == VIP_EMAIL.lower() else 0
+    vip_expire_at = "2099-12-31T23:59:59" if is_vip else None
     with get_db() as conn:
         cursor = conn.execute(
-            "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-            (email, password_hash),
+            "INSERT INTO users (email, password_hash, is_vip, vip_expire_at) VALUES (?, ?, ?, ?)",
+            (email, password_hash, is_vip, vip_expire_at),
         )
-        return {"id": cursor.lastrowid, "email": email}
+        return {"id": cursor.lastrowid, "email": email, "is_vip": is_vip, "vip_expire_at": vip_expire_at}
 
 
 def check_and_increment_summary(user_id: int) -> tuple[bool, int]:
     """
     检查用户是否可以使用 AI 总结，并自增计数。
+    VIP 用户无限使用，普通用户使用统一的 usage_count 额度。
     返回 (allowed, remaining_count)
     """
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     with get_db() as conn:
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             return False, 0
 
+        # VIP 用户无限使用
         if user["is_vip"] and user["vip_expire_at"]:
             expire = datetime.fromisoformat(user["vip_expire_at"])
             if expire > datetime.now(timezone.utc):
                 return True, -1  # -1 means unlimited
 
-        if user["last_summary_date"] != today:
-            conn.execute(
-                "UPDATE users SET daily_summary_count = 1, last_summary_date = ? WHERE id = ?",
-                (today, user_id),
-            )
-            return True, FREE_DAILY_SUMMARY_LIMIT - 1
+        # 普通用户使用统一额度
+        current = user["usage_count"] or 0
+        if current >= NORMAL_USER_USAGE_LIMIT:
+            return False, NORMAL_USER_USAGE_LIMIT - current
 
-        current = user["daily_summary_count"]
-        if current >= FREE_DAILY_SUMMARY_LIMIT:
+        conn.execute(
+            "UPDATE users SET usage_count = usage_count + 1, updated_at = datetime('now') WHERE id = ?",
+            (user_id,),
+        )
+        return True, NORMAL_USER_USAGE_LIMIT - current - 1
+
+
+def check_and_increment_usage(user_id: int) -> tuple[bool, int]:
+    """
+    检查用户是否可以使用视频解析/下载功能，并自增计数。
+    VIP 用户无限使用，普通用户只有20次额度。
+    返回 (allowed, remaining_count)
+    """
+    with get_db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            return False, 0
+
+        # VIP 用户无限使用
+        if user["is_vip"] and user["vip_expire_at"]:
+            expire = datetime.fromisoformat(user["vip_expire_at"])
+            if expire > datetime.now(timezone.utc):
+                return True, -1  # -1 means unlimited
+
+        # 普通用户检查额度
+        current = user["usage_count"] or 0
+        if current >= NORMAL_USER_USAGE_LIMIT:
             return False, 0
 
         conn.execute(
-            "UPDATE users SET daily_summary_count = daily_summary_count + 1 WHERE id = ?",
+            "UPDATE users SET usage_count = usage_count + 1, updated_at = datetime('now') WHERE id = ?",
             (user_id,),
         )
-        return True, FREE_DAILY_SUMMARY_LIMIT - current - 1
+        return True, NORMAL_USER_USAGE_LIMIT - current - 1
+
+
+def get_user_usage(user_id: int) -> int:
+    """获取用户已使用次数"""
+    with get_db() as conn:
+        user = conn.execute("SELECT usage_count FROM users WHERE id = ?", (user_id,)).fetchone()
+        return user["usage_count"] if user else 0
 
 
 def create_order(user_id: int, order_no: str, amount: int, currency: str = "cny", plan_type: str = "monthly") -> dict:

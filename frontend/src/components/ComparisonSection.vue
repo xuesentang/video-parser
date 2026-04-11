@@ -3,7 +3,7 @@
     <div class="max-w-5xl mx-auto px-4 sm:px-6">
       <div class="text-center mb-12">
         <h2 id="comparison-heading" class="text-2xl sm:text-3xl font-bold text-text-primary mb-3">
-          SaveAny 与其他视频下载工具对比
+          SaveAny 与其他视频解析工具对比
         </h2>
         <p class="text-text-secondary text-base max-w-xl mx-auto">
           一张表看清 SaveAny 的核心优势，更新于 2026 年 3 月

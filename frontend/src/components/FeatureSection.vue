@@ -3,7 +3,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
       <div class="text-center mb-12">
         <h2 id="features-heading" class="text-2xl sm:text-3xl font-bold text-text-primary mb-3">
-          为什么选择 <span class="text-primary">SaveAny</span> 视频下载器
+          为什么选择 <span class="text-primary">SaveAny</span> 视频解析器
         </h2>
         <p class="text-text-secondary text-base max-w-xl mx-auto">
           简单、快速、强大的在线视频下载体验，支持 AI 智能总结

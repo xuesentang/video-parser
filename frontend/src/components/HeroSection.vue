@@ -14,11 +14,11 @@
           :class="compact ? 'mb-3' : 'mb-6'"
         >
           <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-          支持 1800+ 平台，永久免费使用
+          支持 1800+ 平台，登录即可使用
         </div>
 
         <h1 :class="compact ? 'text-2xl sm:text-3xl mb-2' : 'text-3xl sm:text-5xl mb-4'" class="font-bold text-text-primary leading-tight">
-          免费在线视频下载器
+          免费在线视频解析器
           <span class="text-primary">，一键保存</span>
         </h1>
         <p :class="compact ? 'mb-4 text-sm sm:text-base' : 'mb-10 text-base sm:text-lg'" class="text-text-secondary max-w-2xl mx-auto leading-relaxed">

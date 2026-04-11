@@ -7,14 +7,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from downloader import VideoDownloader
 from douyin import DouyinParser, is_douyin_url
-from database import init_db
+from database import init_db, check_and_increment_usage, NORMAL_USER_USAGE_LIMIT
+from auth import get_current_user
 
 
 downloader = VideoDownloader()
@@ -65,15 +66,24 @@ async def health_check():
 
 
 @app.post("/api/parse")
-async def parse_video(req: ParseRequest):
-    """解析视频信息（抖音走专用模块，其他走 yt-dlp）"""
+async def parse_video(req: ParseRequest, user: dict = Depends(get_current_user)):
+    """解析视频信息（抖音走专用模块，其他走 yt-dlp）- 需要登录"""
+    # 检查使用额度
+    allowed, remaining = check_and_increment_usage(user["id"])
+    if not allowed:
+        raise HTTPException(status_code=403, detail={
+            "success": False,
+            "error": f"使用额度已用完（共{NORMAL_USER_USAGE_LIMIT}次），升级VIP可无限使用",
+            "need_vip": True
+        })
+
     try:
         loop = asyncio.get_event_loop()
         if is_douyin_url(req.url):
             result = await loop.run_in_executor(None, douyin_parser.parse, req.url)
         else:
             result = await loop.run_in_executor(None, downloader.parse_video, req.url)
-        return {"success": True, "data": result}
+        return {"success": True, "data": result, "remaining": remaining}
     except Exception as e:
         raise HTTPException(status_code=400, detail={
             "success": False,
@@ -82,8 +92,9 @@ async def parse_video(req: ParseRequest):
 
 
 @app.post("/api/download")
-async def download_video(req: DownloadRequest):
-    """服务端下载视频后提供文件下载（抖音走专用模块）"""
+async def download_video(req: DownloadRequest, user: dict = Depends(get_current_user)):
+    """服务端下载视频后提供文件下载（抖音走专用模块）- 需要登录"""
+    # 注意：解析时已扣减额度，下载不再扣减
     try:
         loop = asyncio.get_event_loop()
         if is_douyin_url(req.url):
@@ -111,8 +122,8 @@ async def download_video(req: DownloadRequest):
 
 
 @app.post("/api/direct-url")
-async def get_direct_url(req: DownloadRequest):
-    """获取视频直链"""
+async def get_direct_url(req: DownloadRequest, user: dict = Depends(get_current_user)):
+    """获取视频直链 - 需要登录"""
     try:
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(

@@ -3,7 +3,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
       <div class="text-center mb-12">
         <h2 id="platforms-heading" class="text-2xl sm:text-3xl font-bold text-text-primary mb-3">
-          支持全球 <span class="text-primary">1800+</span> 视频平台下载
+          支持全球 <span class="text-primary">1800+</span> 视频平台解析
         </h2>
         <p class="text-text-secondary text-base max-w-xl mx-auto">
           几乎覆盖所有主流视频、音频、社交媒体平台，包括 YouTube、Bilibili、抖音等
