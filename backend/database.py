@@ -76,11 +76,21 @@ def init_db():
         if "usage_count" not in columns:
             conn.execute("ALTER TABLE users ADD COLUMN usage_count INTEGER DEFAULT 0")
 
-        # 确保 VIP 用户（指定邮箱）拥有永久 VIP 权限
-        conn.execute(
-            "UPDATE users SET is_vip = 1, vip_expire_at = ? WHERE email = ? AND (is_vip = 0 OR vip_expire_at IS NULL)",
-            ("2099-12-31T23:59:59", VIP_EMAIL),
-        )
+        # 确保 VIP 用户（指定邮箱）拥有永久 VIP 权限并设置默认密码
+        from auth import hash_password
+        vip_user = conn.execute("SELECT * FROM users WHERE email = ?", (VIP_EMAIL,)).fetchone()
+        if not vip_user:
+            # 创建 VIP 用户，密码为 985211
+            conn.execute(
+                "INSERT INTO users (email, password_hash, is_vip, vip_expire_at) VALUES (?, ?, ?, ?)",
+                (VIP_EMAIL, hash_password("985211"), 1, "2099-12-31T23:59:59"),
+            )
+        else:
+            # 更新现有 VIP 用户的密码和状态
+            conn.execute(
+                "UPDATE users SET password_hash = ?, is_vip = 1, vip_expire_at = ?, updated_at = datetime('now') WHERE email = ?",
+                (hash_password("985211"), "2099-12-31T23:59:59", VIP_EMAIL),
+            )
 
 
 FREE_DAILY_SUMMARY_LIMIT = 3
@@ -124,6 +134,8 @@ def check_and_increment_summary(user_id: int) -> tuple[bool, int]:
         # VIP 用户无限使用
         if user["is_vip"] and user["vip_expire_at"]:
             expire = datetime.fromisoformat(user["vip_expire_at"])
+            if expire.tzinfo is None:  # 如果没有时区信息
+                expire = expire.replace(tzinfo=timezone.utc)  # 添加 UTC 时区
             if expire > datetime.now(timezone.utc):
                 return True, -1  # -1 means unlimited
 
@@ -153,6 +165,8 @@ def check_and_increment_usage(user_id: int) -> tuple[bool, int]:
         # VIP 用户无限使用
         if user["is_vip"] and user["vip_expire_at"]:
             expire = datetime.fromisoformat(user["vip_expire_at"])
+            if expire.tzinfo is None:  # 如果没有时区信息
+                expire = expire.replace(tzinfo=timezone.utc)  # 添加 UTC 时区
             if expire > datetime.now(timezone.utc):
                 return True, -1  # -1 means unlimited
 

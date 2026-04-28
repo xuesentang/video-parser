@@ -85,20 +85,33 @@ async def summarize_video(req: SummarizeRequest, user: dict = Depends(get_curren
         )
 
         if not subtitle_data["has_subtitle"]:
+            # 无字幕时，推送一个提示性的 summary 事件后正常结束
+            # 这样前端可以展示"该视频无字幕"的提示，而不是报错弹窗
             yield ServerSentEvent(
-                raw_data=json.dumps({"message": "该视频没有可用的字幕，无法生成总结"}, ensure_ascii=False),
-                event="error",
+                raw_data=json.dumps("该视频没有可用的字幕，无法生成总结。请尝试其他带有字幕的视频。", ensure_ascii=False),
+                event="summary",
             )
+            yield ServerSentEvent(
+                raw_data=json.dumps({"markdown": "## 无字幕\n\n该视频没有可用的字幕，无法生成思维导图。"}, ensure_ascii=False),
+                event="mindmap",
+            )
+            quota_info = {"remaining": remaining, "limit": NORMAL_USER_USAGE_LIMIT}
+            yield ServerSentEvent(
+                raw_data=json.dumps(quota_info, ensure_ascii=False),
+                event="quota",
+            )
+            yield ServerSentEvent(raw_data="[DONE]", event="done")
             return
 
         full_text = subtitle_data["full_text"]
+        subtitle_type = subtitle_data.get("subtitle_type", "")
         summarizer = _get_summarizer()
 
-        for token in summarizer.summarize_stream(full_text, req.language):
+        for token in summarizer.summarize_stream(full_text, req.language, subtitle_type):
             yield ServerSentEvent(raw_data=json.dumps(token, ensure_ascii=False), event="summary")
 
         mindmap_md = await loop.run_in_executor(
-            None, summarizer.generate_mindmap, full_text, req.language
+            None, summarizer.generate_mindmap, full_text, req.language, subtitle_type
         )
         yield ServerSentEvent(
             raw_data=json.dumps({"markdown": mindmap_md}, ensure_ascii=False),
@@ -132,9 +145,10 @@ async def chat_with_video(req: ChatRequest, user: dict = Depends(get_current_use
             )
             if not subtitle_data["has_subtitle"]:
                 yield ServerSentEvent(
-                    raw_data=json.dumps({"message": "该视频没有可用的字幕，无法回答问题"}, ensure_ascii=False),
-                    event="error",
+                    raw_data=json.dumps("该视频没有可用的字幕，无法回答问题。请尝试其他带有字幕的视频。", ensure_ascii=False),
+                    event="answer",
                 )
+                yield ServerSentEvent(raw_data="[DONE]", event="done")
                 return
             subtitle_text = subtitle_data["full_text"]
         else:

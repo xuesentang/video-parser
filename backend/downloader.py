@@ -22,10 +22,31 @@ class VideoDownloader:
 
     DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 
+    # 代理地址（从环境变量读取，用于访问 YouTube 等需要翻墙的平台）
+    PROXY_URL = os.getenv("PROXY_URL", "")
+
+    # 通用浏览器请求头，降低被反爬拦截概率
+    BROWSER_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/131.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    }
+
     def __init__(self):
         os.makedirs(self.DOWNLOAD_DIR, exist_ok=True)
         self.ffmpeg_path = _find_ffmpeg_path()
         self.has_ffmpeg = self.ffmpeg_path is not None
+
+    def _base_ydl_opts(self) -> dict:
+        """构建 yt-dlp 公共选项（含代理）"""
+        opts = {"http_headers": dict(self.BROWSER_HEADERS)}
+        if self.PROXY_URL:
+            opts["proxy"] = self.PROXY_URL
+        return opts
 
     @staticmethod
     def _sanitize_filename(name: str) -> str:
@@ -54,6 +75,7 @@ class VideoDownloader:
     def parse_video(self, url: str) -> dict:
         """解析视频信息，不下载文件"""
         ydl_opts = {
+            **self._base_ydl_opts(),
             "quiet": True,
             "no_warnings": True,
             "extract_flat": False,
@@ -154,6 +176,7 @@ class VideoDownloader:
             format_id = "best"
 
         ydl_opts = {
+            **self._base_ydl_opts(),
             "format": format_id,
             "outtmpl": os.path.join(self.DOWNLOAD_DIR, "%(title)s.%(ext)s"),
             "quiet": True,
@@ -198,6 +221,7 @@ class VideoDownloader:
     def get_direct_url(self, url: str, format_id: str) -> dict:
         """获取视频直链"""
         ydl_opts = {
+            **self._base_ydl_opts(),
             "format": format_id,
             "quiet": True,
             "no_warnings": True,

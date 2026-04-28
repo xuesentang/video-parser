@@ -63,6 +63,31 @@
                   </span>
                 </div>
                 <div class="flex items-center gap-3">
+                  <!-- 视图切换按钮 -->
+                  <div class="flex items-center bg-bg-section rounded-lg p-0.5">
+                    <button
+                      @click="subtitleViewMode = 'segment'"
+                      :class="[
+                        'text-xs px-2.5 py-1.5 rounded-md transition-all cursor-pointer',
+                        subtitleViewMode === 'segment'
+                          ? 'bg-white text-primary shadow-sm'
+                          : 'text-text-secondary hover:text-text-primary'
+                      ]"
+                    >
+                      分段
+                    </button>
+                    <button
+                      @click="subtitleViewMode = 'plain'"
+                      :class="[
+                        'text-xs px-2.5 py-1.5 rounded-md transition-all cursor-pointer',
+                        subtitleViewMode === 'plain'
+                          ? 'bg-white text-primary shadow-sm'
+                          : 'text-text-secondary hover:text-text-primary'
+                      ]"
+                    >
+                      纯文本
+                    </button>
+                  </div>
                   <!-- 下载字幕按钮 -->
                   <div class="relative" ref="subtitleDropdownRef">
                     <button
@@ -93,6 +118,7 @@
                     </div>
                   </div>
                   <button
+                    v-if="subtitleViewMode === 'segment'"
                     @click="subtitleExpanded = !subtitleExpanded"
                     class="text-xs text-primary hover:text-primary-dark transition-colors cursor-pointer"
                   >
@@ -100,7 +126,10 @@
                   </button>
                 </div>
               </div>
+
+              <!-- 分段视图 -->
               <div
+                v-if="subtitleViewMode === 'segment'"
                 :class="['space-y-1 overflow-y-auto', subtitleExpanded ? 'max-h-none' : 'max-h-[500px]']"
               >
                 <div
@@ -112,6 +141,25 @@
                     {{ formatTime(seg.start) }}
                   </span>
                   <span class="text-sm text-text-primary leading-relaxed">{{ seg.text }}</span>
+                </div>
+              </div>
+
+              <!-- 纯文本视图 -->
+              <div v-else class="plain-text-view">
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-text-muted">可直接选中复制，或点击右侧按钮一键复制</span>
+                  <button
+                    @click="copySubtitleText"
+                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors cursor-pointer"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    {{ copySuccess ? '已复制' : '复制全部' }}
+                  </button>
+                </div>
+                <div class="plain-text-content">
+                  {{ subtitleData.full_text }}
                 </div>
               </div>
             </div>
@@ -300,6 +348,8 @@ const loadingMessage = ref('正在提取视频字幕...')
 const summaryText = ref('')
 const subtitleData = ref({ segments: [], has_subtitle: false })
 const subtitleExpanded = ref(false)
+const subtitleViewMode = ref('segment')
+const copySuccess = ref(false)
 const mindmapMarkdown = ref('')
 const mindmapSvg = ref(null)
 const mindmapContainer = ref(null)
@@ -644,6 +694,31 @@ function handleClickOutside(e) {
   }
 }
 
+async function copySubtitleText() {
+  const text = subtitleData.value.full_text
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    copySuccess.value = true
+    setTimeout(() => { copySuccess.value = false }, 2000)
+  } catch (err) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      copySuccess.value = true
+      setTimeout(() => { copySuccess.value = false }, 2000)
+    } catch (e) {
+      alert('复制失败，请手动选中复制')
+    }
+    document.body.removeChild(textarea)
+  }
+}
+
 const quotaInfo = ref(null)
 
 async function startSummarize() {
@@ -948,5 +1023,30 @@ onBeforeUnmount(() => {
   border-radius: 0 !important;
   border: none !important;
   background: #ffffff;
+}
+
+/* 纯文本字幕视图样式 */
+.plain-text-view {
+  display: flex;
+  flex-direction: column;
+}
+.plain-text-content {
+  background: #fafafa;
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+  padding: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 600px;
+  overflow-y: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.plain-text-content::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
 }
 </style>

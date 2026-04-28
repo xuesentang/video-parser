@@ -14,12 +14,14 @@ from pydantic import BaseModel
 
 from downloader import VideoDownloader
 from douyin import DouyinParser, is_douyin_url
+from bilibili import BilibiliParser, is_bilibili_url
 from database import init_db, check_and_increment_usage, NORMAL_USER_USAGE_LIMIT
 from auth import get_current_user
 
 
 downloader = VideoDownloader()
 douyin_parser = DouyinParser(download_dir=downloader.DOWNLOAD_DIR)
+bilibili_parser = BilibiliParser(download_dir=downloader.DOWNLOAD_DIR)
 
 
 @asynccontextmanager
@@ -81,6 +83,8 @@ async def parse_video(req: ParseRequest, user: dict = Depends(get_current_user))
         loop = asyncio.get_event_loop()
         if is_douyin_url(req.url):
             result = await loop.run_in_executor(None, douyin_parser.parse, req.url)
+        elif is_bilibili_url(req.url):
+            result = await loop.run_in_executor(None, bilibili_parser.parse, req.url)
         else:
             result = await loop.run_in_executor(None, downloader.parse_video, req.url)
         return {"success": True, "data": result, "remaining": remaining}
@@ -93,12 +97,17 @@ async def parse_video(req: ParseRequest, user: dict = Depends(get_current_user))
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest, user: dict = Depends(get_current_user)):
-    """服务端下载视频后提供文件下载（抖音走专用模块）- 需要登录"""
+    """服务端下载视频后提供文件下载（抖音/B站走专用模块，其他走 yt-dlp）- 需要登录"""
     # 注意：解析时已扣减额度，下载不再扣减
     try:
         loop = asyncio.get_event_loop()
         if is_douyin_url(req.url):
             result = await loop.run_in_executor(None, douyin_parser.download, req.url)
+        elif is_bilibili_url(req.url):
+            # B站下载：走 yt-dlp（已添加浏览器请求头，可正常工作）
+            result = await loop.run_in_executor(
+                None, downloader.download_video, req.url, req.format_id
+            )
         else:
             result = await loop.run_in_executor(
                 None, downloader.download_video, req.url, req.format_id
@@ -141,7 +150,11 @@ async def get_direct_url(req: DownloadRequest, user: dict = Depends(get_current_
 async def proxy_thumbnail(url: str = Query(..., description="缩略图URL")):
     """代理获取视频缩略图，绕过防盗链"""
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        proxy_url = os.getenv("PROXY_URL", "") or None
+        transport_kwargs = {}
+        if proxy_url:
+            transport_kwargs["proxy"] = proxy_url
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True, **transport_kwargs) as client:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Referer": url,
@@ -169,4 +182,4 @@ app.include_router(payment_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
