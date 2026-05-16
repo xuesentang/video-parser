@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-white rounded-2xl border border-border shadow-lg overflow-hidden h-full flex flex-col">
+  <div class="gradient-border overflow-hidden h-full flex flex-col">
         <!-- 标签页导航 -->
-        <div class="flex border-b border-border-light">
+        <div class="flex border-b border-border">
           <button
             v-for="tab in tabs"
             :key="tab.key"
@@ -17,7 +17,7 @@
             <span>{{ tab.label }}</span>
             <div
               v-if="activeTab === tab.key"
-              class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-purple"
             ></div>
           </button>
         </div>
@@ -42,8 +42,8 @@
               AI 正在生成中...
             </div>
             <!-- 免费用户剩余次数提示 -->
-            <div v-if="quotaInfo && quotaInfo.remaining >= 0 && !loading" class="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
-              <span class="text-sm text-blue-700">
+            <div v-if="quotaInfo && quotaInfo.remaining >= 0 && !loading" class="mt-4 p-3 rounded-xl bg-primary-light border border-primary/20 flex items-center justify-between">
+              <span class="text-sm text-primary">
                 剩余使用次数：<strong>{{ quotaInfo.remaining }}</strong> / {{ quotaInfo.limit }}
               </span>
               <button v-if="quotaInfo.remaining <= 5" @click="emit('need-vip')" class="text-xs font-medium text-primary hover:underline cursor-pointer">
@@ -64,13 +64,13 @@
                 </div>
                 <div class="flex items-center gap-3">
                   <!-- 视图切换按钮 -->
-                  <div class="flex items-center bg-bg-section rounded-lg p-0.5">
+                  <div class="flex items-center bg-bg-card rounded-lg p-0.5 border border-border">
                     <button
                       @click="subtitleViewMode = 'segment'"
                       :class="[
                         'text-xs px-2.5 py-1.5 rounded-md transition-all cursor-pointer',
                         subtitleViewMode === 'segment'
-                          ? 'bg-white text-primary shadow-sm'
+                          ? 'bg-bg-section text-primary shadow-sm'
                           : 'text-text-secondary hover:text-text-primary'
                       ]"
                     >
@@ -81,7 +81,7 @@
                       :class="[
                         'text-xs px-2.5 py-1.5 rounded-md transition-all cursor-pointer',
                         subtitleViewMode === 'plain'
-                          ? 'bg-white text-primary shadow-sm'
+                          ? 'bg-bg-section text-primary shadow-sm'
                           : 'text-text-secondary hover:text-text-primary'
                       ]"
                     >
@@ -104,7 +104,7 @@
                     </button>
                     <div
                       v-if="showSubtitleDropdown"
-                      class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-border-light py-1 z-10 min-w-[120px]"
+                      class="absolute right-0 top-full mt-1 bg-bg-card rounded-lg shadow-lg border border-border py-1 z-10 min-w-[120px]"
                     >
                       <button
                         v-for="fmt in subtitleFormats"
@@ -135,7 +135,7 @@
                 <div
                   v-for="(seg, idx) in subtitleData.segments"
                   :key="idx"
-                  class="flex gap-3 py-2 px-3 rounded-lg hover:bg-bg-section transition-colors group"
+                  class="flex gap-3 py-2 px-3 rounded-lg hover:bg-bg-card transition-colors group"
                 >
                   <span class="flex-shrink-0 text-xs text-primary font-mono pt-0.5 min-w-[60px]">
                     {{ formatTime(seg.start) }}
@@ -150,7 +150,7 @@
                   <span class="text-xs text-text-muted">可直接选中复制，或点击右侧按钮一键复制</span>
                   <button
                     @click="copySubtitleText"
-                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors cursor-pointer"
+                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-purple text-white hover:opacity-90 transition-opacity cursor-pointer"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -216,7 +216,7 @@
               </div>
               <div
                 ref="mindmapContainer"
-                class="mindmap-wrapper w-full border border-border-light rounded-xl bg-white overflow-hidden"
+                class="mindmap-wrapper w-full border border-border rounded-xl bg-bg-main overflow-hidden"
                 :class="isFullscreen ? 'mindmap-fullscreen' : 'min-h-[500px]'"
               >
                 <svg ref="mindmapSvg" class="w-full h-full" :style="isFullscreen ? 'height: 100%' : 'min-height: 500px'"></svg>
@@ -224,7 +224,7 @@
                 <button
                   v-if="isFullscreen"
                   @click="toggleFullscreen"
-                  class="fixed top-4 right-4 z-50 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/90 backdrop-blur shadow-lg text-sm text-text-primary hover:bg-white transition-colors cursor-pointer border border-border-light"
+                  class="fixed top-4 right-4 z-50 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-bg-card/90 backdrop-blur shadow-lg text-sm text-text-primary hover:bg-bg-card transition-colors cursor-pointer border border-border"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -275,8 +275,8 @@
                     :class="[
                       'max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
                       msg.role === 'user'
-                        ? 'bg-primary text-white rounded-br-md'
-                        : 'bg-bg-section text-text-primary rounded-bl-md border border-border-light'
+                        ? 'bg-gradient-to-r from-primary to-purple text-white rounded-br-md'
+                        : 'bg-bg-card text-text-primary rounded-bl-md border border-border'
                     ]"
                   >
                     <div v-if="msg.role === 'assistant'" class="chat-prose prose prose-slate prose-sm max-w-none" v-html="renderMarkdown(msg.content)"></div>
@@ -290,19 +290,19 @@
               </div>
 
               <!-- 输入区域 -->
-              <div class="flex gap-2 pt-3 border-t border-border-light">
+              <div class="flex gap-2 pt-3 border-t border-border">
                 <input
                   v-model="chatInput"
                   @keydown.enter.prevent="sendQuestion"
                   type="text"
                   placeholder="输入你的问题..."
-                  class="flex-1 h-11 px-4 rounded-xl border border-border bg-white text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  class="flex-1 h-11 px-4 rounded-xl border border-border bg-bg-card text-sm text-text-primary placeholder:text-text-muted input-glow transition-all"
                   :disabled="chatLoading"
                 />
                 <button
                   @click="sendQuestion"
                   :disabled="!chatInput.trim() || chatLoading"
-                  class="h-11 px-5 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+                  class="h-11 px-5 rounded-xl btn-primary text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
                 >
                   <svg v-if="chatLoading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -406,7 +406,10 @@ function renderMindmap(md) {
     mindmapSvg.value.innerHTML = ''
     const transformer = new Transformer()
     const { root } = transformer.transform(md)
-    markmapInstance = Markmap.create(mindmapSvg.value, { autoFit: true }, root)
+    markmapInstance = Markmap.create(mindmapSvg.value, {
+      autoFit: true,
+      style: (id) => `${id} .markmap-foreign div { color: #e2e8f0; }`,
+    }, root)
   } catch (e) {
     console.warn('思维导图渲染失败:', e)
   }
@@ -474,7 +477,7 @@ function buildExportableSvg() {
     textEl.setAttribute('y', String(y + h / 2 + 5))
     textEl.setAttribute('font-size', '14')
     textEl.setAttribute('font-family', 'sans-serif')
-    textEl.setAttribute('fill', '#333')
+    textEl.setAttribute('fill', '#e2e8f0')
     textEl.setAttribute('dominant-baseline', 'middle')
     textEl.textContent = textContent
 
@@ -875,7 +878,7 @@ onBeforeUnmount(() => {
   margin-bottom: 0.75rem;
   color: var(--color-text-primary);
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
 }
 .summary-prose :deep(h3) {
   font-size: 1rem;
@@ -896,6 +899,7 @@ onBeforeUnmount(() => {
 .summary-prose :deep(li) {
   margin-bottom: 0.35rem;
   line-height: 1.8;
+  color: var(--color-text-primary);
 }
 .summary-prose :deep(li::marker) {
   color: var(--color-primary);
@@ -906,7 +910,7 @@ onBeforeUnmount(() => {
 }
 .summary-prose :deep(hr) {
   margin: 1.5rem 0;
-  border-color: var(--color-border-light);
+  border-color: var(--color-border);
 }
 .summary-prose :deep(blockquote) {
   border-left: 3px solid var(--color-primary);
@@ -914,12 +918,12 @@ onBeforeUnmount(() => {
   color: var(--color-text-secondary);
   font-style: normal;
   margin: 1rem 0;
-  background: var(--color-bg-section);
+  background: var(--color-bg-card);
   border-radius: 0 8px 8px 0;
   padding: 0.75rem 1rem;
 }
 .summary-prose :deep(code) {
-  background: var(--color-bg-section);
+  background: var(--color-bg-card);
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
   font-size: 0.85em;
@@ -947,7 +951,7 @@ onBeforeUnmount(() => {
   font-size: 0.875rem;
 }
 .summary-prose :deep(th) {
-  background: var(--color-bg-section);
+  background: var(--color-bg-card);
   padding: 0.5rem 0.75rem;
   text-align: left;
   font-weight: 600;
@@ -955,7 +959,7 @@ onBeforeUnmount(() => {
 }
 .summary-prose :deep(td) {
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
 }
 .summary-prose :deep(a) {
   color: var(--color-primary);
@@ -1009,7 +1013,7 @@ onBeforeUnmount(() => {
 }
 .mindmap-wrapper :deep(foreignObject div) {
   font: 300 16px/20px sans-serif;
-  color: #333;
+  color: #e2e8f0;
 }
 
 /* 思维导图全屏样式 */
@@ -1022,7 +1026,7 @@ onBeforeUnmount(() => {
   z-index: 40;
   border-radius: 0 !important;
   border: none !important;
-  background: #ffffff;
+  background: #0a0a0f;
 }
 
 /* 纯文本字幕视图样式 */
@@ -1031,8 +1035,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 .plain-text-content {
-  background: #fafafa;
-  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 1.25rem;
   font-size: 0.9375rem;

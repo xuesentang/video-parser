@@ -1,31 +1,42 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-bg-main">
+  <div class="min-h-screen flex flex-col bg-bg-main relative">
+    <!-- 动态背景 -->
+    <div class="bg-mesh"></div>
+    <div class="bg-grid"></div>
+    <div class="content-wrapper flex flex-col flex-1">
     <AppHeader
       :user="currentUser"
+      :mode="appMode"
       @login="showAuthModal('login')"
       @register="showAuthModal('register')"
       @logout="handleLogout"
+      @switch-mode="handleSwitchMode"
     />
+    <!-- 博主追踪模式 -->
+    <TrackerView v-if="appMode === 'tracker'" :user="currentUser" @need-login="showAuthModal('login')" />
+    <!-- 批量字幕模式 -->
+    <BatchSubtitleView v-else-if="appMode === 'batch'" :user="currentUser" @need-login="showAuthModal('login')" />
+    <!-- 视频解析模式 -->
+    <template v-else>
     <main class="flex-1">
       <HeroSection
         @parse="handleParse"
         :loading="loading"
         :compact="!!videoData"
         :showSlogan="!videoData || demoMode"
+        :pending-url="pendingParseUrl"
       />
       <!-- 视频信息 + AI 总结：左右双栏同屏布局 -->
-      <section v-if="videoData" class="py-4 sm:py-6 bg-white">
+      <section v-if="videoData" class="py-4 sm:py-6 bg-bg-main">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
           <div class="flex flex-col lg:flex-row gap-6">
             <!-- 左栏：视频信息 -->
             <div class="w-full lg:w-2/5 lg:flex-shrink-0">
               <VideoResult
-                :video="videoData"
-                :downloading="downloading"
-                :summarizing="summarizing"
-                @download="handleDownload"
-                @summarize="handleSummarize"
-              />
+        :video="videoData"
+        :summarizing="summarizing"
+        @summarize="handleSummarize"
+      />
             </div>
             <!-- 右栏：AI 总结 -->
             <div class="w-full lg:w-3/5 min-w-0">
@@ -48,6 +59,7 @@
       <PricingSection :user="currentUser" @need-login="showAuthModal('login')" />
       <PlatformSection />
     </main>
+    </template>
     <AppFooter />
 
     <AuthModal
@@ -56,11 +68,12 @@
       @close="authModalVisible = false"
       @success="handleAuthSuccess"
     />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, provide, nextTick } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import HeroSection from './components/HeroSection.vue'
 import VideoResult from './components/VideoResult.vue'
@@ -72,10 +85,13 @@ import PricingSection from './components/PricingSection.vue'
 import PlatformSection from './components/PlatformSection.vue'
 import AppFooter from './components/AppFooter.vue'
 import AuthModal from './components/AuthModal.vue'
-import { parseVideo, downloadViaServer } from './api/video.js'
+import TrackerView from './components/TrackerView.vue'
+import BatchSubtitleView from './components/BatchSubtitleView.vue'
+import { parseVideo } from './api/video.js'
 import { getSavedUser, fetchMe, logout as logoutApi, isLoggedIn } from './api/auth.js'
 
 const demoMode = ref(false)
+const appMode = ref('downloader')
 let enterCount = 0
 let enterTimer = null
 
@@ -128,6 +144,25 @@ async function restoreUser() {
   }
 }
 
+// ===== 模式切换 =====
+function handleSwitchMode(mode) {
+  appMode.value = mode
+}
+
+// ===== 从博主追踪报告传入链接进行解析 =====
+const pendingParseUrl = ref('')
+
+async function setParseUrl(url) {
+  appMode.value = 'downloader'
+  // 先重置确保 watch 能触发（即使连续点击同一个链接）
+  pendingParseUrl.value = ''
+  // 等待 DOM 更新后再赋值，确保 HeroSection 能收到变化
+  await nextTick()
+  pendingParseUrl.value = url
+}
+
+provide('setParseUrl', setParseUrl)
+
 // ===== 额度用完处理 =====
 function handleQuotaExceeded() {
   alert('使用额度已用完（共20次），如需更多请联系管理员')
@@ -135,7 +170,6 @@ function handleQuotaExceeded() {
 
 // ===== 视频功能 =====
 const loading = ref(false)
-const downloading = ref(false)
 const videoData = ref(null)
 const currentUrl = ref('')
 const summaryKey = ref(0)
@@ -184,27 +218,5 @@ async function handleParse(url) {
   }
 }
 
-async function handleDownload(formatId) {
-  downloading.value = true
-  try {
-    const response = await downloadViaServer(currentUrl.value, formatId)
-    const contentDisposition = response.headers['content-disposition']
-    let filename = 'video.mp4'
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;\n]+)/i)
-      if (match) filename = decodeURIComponent(match[1].replace(/"/g, ''))
-    }
-    const blob = new Blob([response.data])
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    window.URL.revokeObjectURL(url)
-  } catch (err) {
-    alert('下载失败：' + (err.message || '请稍后重试'))
-  } finally {
-    downloading.value = false
-  }
-}
+
 </script>

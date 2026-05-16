@@ -26,7 +26,7 @@ def _get_config(key: str, default: str = "") -> str:
 
 PLANS = {
     "monthly": {
-        "name": "SaveAny VIP 月度会员",
+        "name": "VideoParser VIP 月度会员",
         "amount": 990,
         "currency": "cny",
     },

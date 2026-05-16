@@ -27,7 +27,6 @@ def get_db():
         conn.close()
 
 
-VIP_EMAIL = "18300618398@163.com"
 NORMAL_USER_USAGE_LIMIT = 20
 
 
@@ -76,21 +75,23 @@ def init_db():
         if "usage_count" not in columns:
             conn.execute("ALTER TABLE users ADD COLUMN usage_count INTEGER DEFAULT 0")
 
-        # 确保 VIP 用户（指定邮箱）拥有永久 VIP 权限并设置默认密码
-        from auth import hash_password
-        vip_user = conn.execute("SELECT * FROM users WHERE email = ?", (VIP_EMAIL,)).fetchone()
-        if not vip_user:
-            # 创建 VIP 用户，密码为 985211
-            conn.execute(
-                "INSERT INTO users (email, password_hash, is_vip, vip_expire_at) VALUES (?, ?, ?, ?)",
-                (VIP_EMAIL, hash_password("985211"), 1, "2099-12-31T23:59:59"),
-            )
-        else:
-            # 更新现有 VIP 用户的密码和状态
-            conn.execute(
-                "UPDATE users SET password_hash = ?, is_vip = 1, vip_expire_at = ?, updated_at = datetime('now') WHERE email = ?",
-                (hash_password("985211"), "2099-12-31T23:59:59", VIP_EMAIL),
-            )
+        # 如果配置了 VIP 环境变量，则确保该邮箱用户拥有永久 VIP 权限
+        vip_email = os.getenv("VIP_EMAIL", "").strip()
+        vip_password = os.getenv("VIP_PASSWORD", "").strip()
+        if vip_email and vip_password:
+            from auth import hash_password
+            vip_user = conn.execute("SELECT * FROM users WHERE email = ?", (vip_email,)).fetchone()
+            password_hash = hash_password(vip_password)
+            if not vip_user:
+                conn.execute(
+                    "INSERT INTO users (email, password_hash, is_vip, vip_expire_at) VALUES (?, ?, ?, ?)",
+                    (vip_email, password_hash, 1, "2099-12-31T23:59:59"),
+                )
+            else:
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, is_vip = 1, vip_expire_at = ?, updated_at = datetime('now') WHERE email = ?",
+                    (password_hash, "2099-12-31T23:59:59", vip_email),
+                )
 
 
 FREE_DAILY_SUMMARY_LIMIT = 3
@@ -109,8 +110,9 @@ def get_user_by_id(user_id: int) -> dict | None:
 
 
 def create_user(email: str, password_hash: str) -> dict:
-    """创建用户，VIP邮箱自动获得永久VIP权限"""
-    is_vip = 1 if email.lower() == VIP_EMAIL.lower() else 0
+    """创建用户，如配置了VIP环境变量则该邮箱自动获得永久VIP权限"""
+    vip_email = os.getenv("VIP_EMAIL", "").strip()
+    is_vip = 1 if vip_email and email.lower() == vip_email.lower() else 0
     vip_expire_at = "2099-12-31T23:59:59" if is_vip else None
     with get_db() as conn:
         cursor = conn.execute(

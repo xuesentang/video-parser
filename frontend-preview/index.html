@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoParser - 万能视频解析</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'vp-bg': '#0a0a0f',
+            'vp-bg-card': '#12121a',
+            'vp-bg-elevated': '#1a1a25',
+            'vp-border': '#2a2a3a',
+            'vp-border-light': '#333344',
+            'vp-cyan': '#00d4ff',
+            'vp-cyan-dim': 'rgba(0, 212, 255, 0.1)',
+            'vp-purple': '#a855f7',
+            'vp-purple-dim': 'rgba(168, 85, 247, 0.1)',
+            'vp-text': '#e2e8f0',
+            'vp-text-secondary': '#94a3b8',
+            'vp-text-muted': '#64748b',
+            'vp-success': '#10b981',
+            'vp-warning': '#f59e0b',
+            'vp-error': '#ef4444',
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 动态背景 */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 30% at 50% 100%, rgba(0, 212, 255, 0.04) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* 网格背景 */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* 发光效果 */
+    .glow-cyan {
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.3), 0 0 40px rgba(0, 212, 255, 0.1);
+    }
+    .glow-cyan-sm {
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
+    .glow-text {
+      text-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.2);
+    }
+
+    /* 渐变边框 */
+    .gradient-border {
+      position: relative;
+      background: #12121a;
+      border-radius: 16px;
+    }
+    .gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.4), rgba(168, 85, 247, 0.3), rgba(0, 212, 255, 0.1));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* 玻璃拟态 */
+    .glass {
+      background: rgba(18, 18, 26, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(42, 42, 58, 0.8);
+    }
+
+    /* 导航激活态 */
+    .nav-active {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(168, 85, 247, 0.1));
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      color: #00d4ff;
+    }
+
+    /* 按钮渐变 */
+    .btn-primary {
+      background: linear-gradient(135deg, #00d4ff, #a855f7);
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+    }
+
+    /* 输入框聚焦 */
+    .input-glow:focus {
+      outline: none;
+      border-color: rgba(0, 212, 255, 0.5);
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1), 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+
+    /* 卡片悬停 */
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1), 0 0 0 1px rgba(0, 212, 255, 0.1);
+    }
+
+    /* 动画 */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0f; }
+    ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+
+    /* 内容区域 */
+    .content-wrapper { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+  <!-- 背景层 -->
+  <div class="bg-mesh"></div>
+  <div class="bg-grid"></div>
+
+  <div class="content-wrapper min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass border-b border-vp-border">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-vp-cyan to-vp-purple flex items-center justify-center shadow-lg" style="box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="text-lg font-bold text-vp-text tracking-tight">VideoParser</span>
+          <span class="hidden sm:inline text-xs text-vp-cyan bg-vp-cyan-dim px-2.5 py-0.5 rounded-full border border-vp-cyan/20">万能视频解析</span>
+        </a>
+
+        <!-- 模式切换 -->
+        <div class="flex items-center bg-vp-bg-elevated rounded-full p-0.5 text-xs border border-vp-border">
+          <button onclick="switchMode('parser')" id="btn-parser" class="px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer nav-active">
+            视频解析
+          </button>
+          <button onclick="switchMode('batch')" id="btn-batch" class="px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer text-vp-text-secondary hover:text-vp-text">
+            批量字幕
+          </button>
+          <button onclick="switchMode('tracker')" id="btn-tracker" class="px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer text-vp-text-secondary hover:text-vp-text">
+            博主追踪
+          </button>
+        </div>
+
+        <!-- 导航 -->
+        <nav class="hidden md:flex items-center gap-6 text-sm text-vp-text-secondary">
+          <a href="#features" class="hover:text-vp-cyan transition-colors">功能特性</a>
+          <a href="#how-to-use" class="hover:text-vp-cyan transition-colors">使用教程</a>
+          <a href="#comparison" class="hover:text-vp-cyan transition-colors">工具对比</a>
+          <a href="#pricing" class="hover:text-vp-cyan transition-colors">套餐价格</a>
+        </nav>
+
+        <!-- 用户区 -->
+        <div class="flex items-center gap-3">
+          <button class="hidden sm:inline-flex items-center px-4 py-2 rounded-full text-sm font-medium text-vp-text-secondary hover:text-vp-cyan hover:bg-vp-cyan-dim transition-all cursor-pointer">
+            登录
+          </button>
+          <button class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-white btn-primary cursor-pointer">
+            免费注册
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1">
+      <!-- Hero Section -->
+      <section class="relative overflow-hidden pt-16 pb-12 sm:pt-24 sm:pb-16">
+        <!-- 装饰光球 -->
+        <div class="absolute top-20 left-1/4 w-72 h-72 bg-vp-cyan/5 rounded-full blur-3xl animate-float"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-vp-purple/5 rounded-full blur-3xl animate-float" style="animation-delay: -3s;"></div>
+
+        <div class="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <!-- 状态标签 -->
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm text-vp-text-secondary mb-6">
+            <span class="w-2 h-2 rounded-full bg-vp-success animate-pulse-glow"></span>
+            支持 1800+ 平台，登录即可使用
+          </div>
+
+          <!-- 主标题 -->
+          <h1 class="text-3xl sm:text-5xl font-bold text-vp-text leading-tight mb-4">
+            免费在线视频解析器
+            <span class="bg-gradient-to-r from-vp-cyan to-vp-purple bg-clip-text text-transparent glow-text">，一键保存</span>
+          </h1>
+
+          <!-- 副标题 -->
+          <p class="text-base sm:text-lg text-vp-text-secondary max-w-2xl mx-auto leading-relaxed mb-10">
+            粘贴视频链接，智能解析下载。支持 YouTube、Bilibili、抖音、TikTok 等 1800+ 平台，多种清晰度可选，还能 AI 总结视频内容
+          </p>
+
+          <!-- 搜索框 -->
+          <div class="max-w-2xl mx-auto">
+            <form class="relative flex items-center" onsubmit="event.preventDefault(); alert('演示模式：解析功能已触发！');">
+              <div class="relative flex-1">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-vp-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=... 粘贴视频链接"
+                  class="w-full h-13 sm:h-14 pl-12 pr-4 rounded-full sm:rounded-r-none border border-vp-border bg-vp-bg-card text-base text-vp-text placeholder:text-vp-text-muted input-glow transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                class="hidden sm:flex items-center gap-2 h-14 px-8 rounded-r-full btn-primary text-white font-medium text-base cursor-pointer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                解析视频
+              </button>
+              <!-- 移动端按钮 -->
+              <button
+                type="submit"
+                class="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-r from-vp-cyan to-vp-purple text-white cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </form>
+
+            <!-- 示例链接 -->
+            <div class="flex flex-wrap items-center justify-center gap-3 mt-5 text-xs text-vp-text-muted">
+              <span>试试：</span>
+              <button class="px-3 py-1 rounded-full bg-vp-bg-card border border-vp-border hover:border-vp-cyan/50 hover:text-vp-cyan transition-all cursor-pointer">
+                YouTube
+              </button>
+              <button class="px-3 py-1 rounded-full bg-vp-bg-card border border-vp-border hover:border-vp-cyan/50 hover:text-vp-cyan transition-all cursor-pointer">
+                Bilibili
+              </button>
+              <button class="px-3 py-1 rounded-full bg-vp-bg-card border border-vp-border hover:border-vp-cyan/50 hover:text-vp-cyan transition-all cursor-pointer">
+                Twitter/X
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 功能特性 -->
+      <section id="features" class="py-16 sm:py-20">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+          <div class="text-center mb-12">
+            <h2 class="text-2xl sm:text-3xl font-bold text-vp-text mb-3">
+              为什么选择 <span class="bg-gradient-to-r from-vp-cyan to-vp-purple bg-clip-text text-transparent">VideoParser</span> 视频解析器
+            </h2>
+            <p class="text-vp-text-secondary text-base max-w-xl mx-auto">
+              简单、快速、强大的在线视频解析体验，支持 AI 智能总结
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <!-- 卡片1 -->
+            <article class="gradient-border card-hover p-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl bg-vp-cyan-dim border border-vp-cyan/20">
+                🌐
+              </div>
+              <h3 class="text-base font-semibold text-vp-text mb-2">支持 1800+ 平台</h3>
+              <p class="text-sm text-vp-text-secondary leading-relaxed">YouTube、Bilibili、抖音、TikTok、Twitter、Instagram 等全球主流平台</p>
+            </article>
+
+            <!-- 卡片2 -->
+            <article class="gradient-border card-hover p-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl bg-vp-purple-dim border border-vp-purple/20">
+                ⚡
+              </div>
+              <h3 class="text-base font-semibold text-vp-text mb-2">极速解析下载</h3>
+              <p class="text-sm text-vp-text-secondary leading-relaxed">智能解析视频链接，自动匹配最优下载方式，速度快人一步</p>
+            </article>
+
+            <!-- 卡片3 -->
+            <article class="gradient-border card-hover p-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl bg-vp-cyan-dim border border-vp-cyan/20">
+                📱
+              </div>
+              <h3 class="text-base font-semibold text-vp-text mb-2">手机也能用</h3>
+              <p class="text-sm text-vp-text-secondary leading-relaxed">完美适配手机浏览器，随时随地，想下就下，无需安装任何 App</p>
+            </article>
+
+            <!-- 卡片4 -->
+            <article class="gradient-border card-hover p-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl bg-vp-purple-dim border border-vp-purple/20">
+                🎬
+              </div>
+              <h3 class="text-base font-semibold text-vp-text mb-2">多种清晰度</h3>
+              <p class="text-sm text-vp-text-secondary leading-relaxed">支持从 360p 到 4K 多种清晰度选择，满足不同场景需求</p>
+            </article>
+
+            <!-- 卡片5 -->
+            <article class="gradient-border card-hover p-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl bg-vp-cyan-dim border border-vp-cyan/20">
+                🤖
+              </div>
+              <h3 class="text-base font-semibold text-vp-text mb-2">AI 视频总结</h3>
+              <p class="text-sm text-vp-text-secondary leading-relaxed">AI 智能分析视频内容，一键生成摘要、思维导图，还能针对视频提问</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 使用教程 -->
+      <section id="how-to-use" class="py-16 sm:py-20">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6">
+          <div class="text-center mb-12">
+            <h2 class="text-2xl sm:text-3xl font-bold text-vp-text mb-3">三步轻松解析视频</h2>
+            <p class="text-vp-text-secondary">无需安装任何软件，打开网页即可使用</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="gradient-border card-hover p-8 text-center relative">
+              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-vp-cyan to-vp-purple flex items-center justify-center text-white text-sm font-bold">1</div>
+              <div class="w-16 h-16 rounded-2xl bg-vp-cyan-dim border border-vp-cyan/20 flex items-center justify-center mx-auto mb-4 text-3xl">
+                🔗
+              </div>
+              <h3 class="text-lg font-semibold text-vp-text mb-2">复制链接</h3>
+              <p class="text-sm text-vp-text-secondary">从 YouTube、Bilibili、抖音等平台复制视频链接</p>
+            </div>
+
+            <div class="gradient-border card-hover p-8 text-center relative">
+              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-vp-cyan to-vp-purple flex items-center justify-center text-white text-sm font-bold">2</div>
+              <div class="w-16 h-16 rounded-2xl bg-vp-purple-dim border border-vp-purple/20 flex items-center justify-center mx-auto mb-4 text-3xl">
+                🔍
+              </div>
+              <h3 class="text-lg font-semibold text-vp-text mb-2">粘贴解析</h3>
+              <p class="text-sm text-vp-text-secondary">将链接粘贴到输入框，点击解析视频按钮</p>
+            </div>
+
+            <div class="gradient-border card-hover p-8 text-center relative">
+              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-vp-cyan to-vp-purple flex items-center justify-center text-white text-sm font-bold">3</div>
+              <div class="w-16 h-16 rounded-2xl bg-vp-cyan-dim border border-vp-cyan/20 flex items-center justify-center mx-auto mb-4 text-3xl">
+                💾
+              </div>
+              <h3 class="text-lg font-semibold text-vp-text mb-2">下载保存</h3>
+              <p class="text-sm text-vp-text-secondary">选择想要的清晰度，一键下载到本地</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 定价 -->
+      <section id="pricing" class="py-16 sm:py-20">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6">
+          <div class="text-center mb-12">
+            <h2 class="text-2xl sm:text-3xl font-bold text-vp-text mb-3">选择适合你的方案</h2>
+            <p class="text-vp-text-secondary">注册即可免费使用，VIP 解锁更多功能</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <!-- 免费版 -->
+            <div class="gradient-border card-hover p-8">
+              <div class="text-center mb-6">
+                <h3 class="text-xl font-semibold text-vp-text mb-2">免费版</h3>
+                <div class="text-4xl font-bold text-vp-text">¥0<span class="text-base font-normal text-vp-text-muted">/月</span></div>
+              </div>
+              <ul class="space-y-3 mb-8">
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  每月 20 次解析额度
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  支持 1800+ 平台
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  基础 AI 总结
+                </li>
+              </ul>
+              <button class="w-full py-3 rounded-xl border border-vp-border text-vp-text-secondary hover:border-vp-cyan/50 hover:text-vp-cyan transition-all font-medium cursor-pointer">
+                免费注册
+              </button>
+            </div>
+
+            <!-- VIP版 -->
+            <div class="gradient-border card-hover p-8 relative overflow-hidden">
+              <!-- 推荐标签 -->
+              <div class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-medium text-white bg-gradient-to-r from-vp-cyan to-vp-purple">
+                推荐
+              </div>
+              <div class="text-center mb-6">
+                <h3 class="text-xl font-semibold text-vp-text mb-2">VIP 会员</h3>
+                <div class="text-4xl font-bold bg-gradient-to-r from-vp-cyan to-vp-purple bg-clip-text text-transparent">¥29<span class="text-base font-normal text-vp-text-muted">/月</span></div>
+              </div>
+              <ul class="space-y-3 mb-8">
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  无限解析额度
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  4K 高清下载
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  完整 AI 功能
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  批量字幕提取
+                </li>
+                <li class="flex items-center gap-3 text-sm text-vp-text-secondary">
+                  <svg class="w-5 h-5 text-vp-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  博主追踪功能
+                </li>
+              </ul>
+              <button class="w-full py-3 rounded-xl btn-primary text-white font-medium cursor-pointer">
+                升级 VIP
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass border-t border-vp-border py-8">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-6">
+          <p class="text-sm text-vp-text-secondary leading-relaxed max-w-3xl mx-auto">
+            <strong class="text-vp-text">VideoParser</strong> — 免费在线万能视频解析器，支持
+            <a href="#" class="text-vp-cyan hover:underline">YouTube</a>、
+            <a href="#" class="text-vp-cyan hover:underline">Bilibili</a>、
+            <a href="#" class="text-vp-cyan hover:underline">抖音</a>、
+            <a href="#" class="text-vp-cyan hover:underline">TikTok</a>
+            等 1800+ 平台视频解析。提供
+            <a href="#" class="text-vp-cyan hover:underline">AI 视频总结</a>、思维导图生成、字幕下载等智能功能。
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <a href="/" class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-vp-cyan to-vp-purple flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-vp-text">VideoParser</span>
+          </a>
+          <p class="text-xs text-vp-text-muted text-center leading-relaxed">
+            本工具仅供学习交流使用，请尊重视频版权，勿用于商业用途。下载内容的版权归原作者所有。
+          </p>
+          <p class="text-xs text-vp-text-muted">
+            &copy; 2025 VideoParser
+          </p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function switchMode(mode) {
+      const buttons = ['parser', 'batch', 'tracker'];
+      buttons.forEach(btn => {
+        const el = document.getElementById('btn-' + btn);
+        if (btn === mode) {
+          el.classList.add('nav-active');
+          el.classList.remove('text-vp-text-secondary');
+        } else {
+          el.classList.remove('nav-active');
+          el.classList.add('text-vp-text-secondary');
+        }
+      });
+
+      if (mode !== 'parser') {
+        alert('演示模式：切换到「' + (mode === 'batch' ? '批量字幕' : '博主追踪') + '」界面');
+        // 切回视频解析以便继续浏览
+        setTimeout(() => switchMode('parser'), 500);
+      }
+    }
+  </script>
+</body>
+</html>
