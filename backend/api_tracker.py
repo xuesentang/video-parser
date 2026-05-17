@@ -69,9 +69,17 @@ async def add_creator(req: AddCreatorRequest, user: dict = Depends(get_current_u
                 None, bilibili_get_creator_info, url
             )
         elif is_youtube_channel_url(url):
-            creator_info = await asyncio.get_event_loop().run_in_executor(
-                None, youtube_get_creator_info, url
-            )
+            # 先尝试RSS方式（原有逻辑）
+            try:
+                creator_info = await asyncio.get_event_loop().run_in_executor(
+                    None, youtube_get_creator_info, url
+                )
+            except Exception:
+                # RSS失败时自动降级到yt-dlp
+                from tracker_youtube_ytdlp import get_creator_info as ytdlp_get_creator_info
+                creator_info = await asyncio.get_event_loop().run_in_executor(
+                    None, ytdlp_get_creator_info, url
+                )
         else:
             raise HTTPException(status_code=400, detail="不支持的平台或URL格式。请输入B站UP主空间链接或YouTube频道链接")
     except ValueError as e:
