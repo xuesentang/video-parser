@@ -26,6 +26,7 @@ desktop.ini
 # 项目临时文件
 backend/downloads/
 backend/logs/
+backend/cookies.txt
 *.part
 *.log
 

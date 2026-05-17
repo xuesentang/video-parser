@@ -1,7 +1,3 @@
-"""YouTube频道适配器 - 获取频道信息和近期视频列表
-通过 RSS 订阅获取，无需 API Key，复用 PROXY_URL 代理配置
-"""
-
 import re
 import time
 import logging
@@ -12,10 +8,11 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
+from config import PROXY_URL
+
 logger = logging.getLogger("tracker_youtube")
 
-# 代理配置（复用 summarizer.py 的模式）
-_PROXY_URL = __import__("os").getenv("PROXY_URL", "")
+_PROXY_URL = PROXY_URL
 
 # YouTube RSS 端点
 YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml"

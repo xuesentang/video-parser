@@ -1,14 +1,10 @@
-"""YouTube频道适配器 - yt-dlp备用方案
-当RSS方式失败时自动降级使用
-复用 tracker_youtube_adapter 的数据结构，确保接口完全兼容
-"""
-
 import logging
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 import yt_dlp
 
+from config import PROXY_URL, get_ydl_cookie_option, get_ydl_runtime_options
 from tracker_youtube_adapter import CreatorInfo, VideoItem
 
 logger = logging.getLogger("tracker_youtube_ytdlp")
@@ -34,11 +30,15 @@ def get_creator_info(url: str) -> CreatorInfo:
         raise ValueError("无效的YouTube频道链接")
 
     ydl_opts = {
+        **get_ydl_runtime_options(),
         'quiet': True,
         'extract_flat': True,
         'skip_download': True,
-        'playlistend': 1,  # 只获取频道信息，不需要视频列表
+        'playlistend': 1,
     }
+    if PROXY_URL:
+        ydl_opts['proxy'] = PROXY_URL
+    ydl_opts.update(get_ydl_cookie_option())
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -97,13 +97,17 @@ def get_recent_videos(channel_id: str, hours: int = 72) -> list[VideoItem]:
     channel_videos_url = f"{channel_url}/videos"
 
     ydl_opts = {
+        **get_ydl_runtime_options(),
         'quiet': True,
-        'extract_flat': False,  # 需要完整信息包括发布时间
+        'extract_flat': False,
         'skip_download': True,
-        'playlistend': 50,  # 最多获取50个视频
-        'ignoreerrors': True,  # 忽略单个视频错误（如私有视频）
-        'no_warnings': True,  # 减少警告输出
+        'playlistend': 50,
+        'ignoreerrors': True,
+        'no_warnings': True,
     }
+    if PROXY_URL:
+        ydl_opts['proxy'] = PROXY_URL
+    ydl_opts.update(get_ydl_cookie_option())
 
     videos = []
 

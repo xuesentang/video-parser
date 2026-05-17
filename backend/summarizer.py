@@ -1,5 +1,3 @@
-"""AI 视频总结模块：字幕提取 + DeepSeek 大模型总结"""
-
 import json
 import os
 import re
@@ -10,6 +8,8 @@ from typing import Optional
 import httpx
 import yt_dlp
 from openai import OpenAI
+
+from config import PROXY_URL, get_ydl_cookie_option, get_ydl_runtime_options
 
 
 def _is_bilibili_url(url: str) -> bool:
@@ -22,7 +22,6 @@ def _is_douyin_url(url: str) -> bool:
     return any(d in url for d in douyin_domains)
 
 
-# 通用的浏览器请求头，用于 yt-dlp 调用，降低被反爬拦截概率
 _BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -31,11 +30,9 @@ _BROWSER_HEADERS = {
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    "Referer": "https://www.bilibili.com/",
 }
 
-# 代理地址（从环境变量读取，用于访问 YouTube 等需要翻墙的平台）
-_PROXY_URL = os.getenv("PROXY_URL", "")
+_PROXY_URL = PROXY_URL
 
 
 def _safe_request(
@@ -577,6 +574,7 @@ class SubtitleExtractor:
 
     def _get_video_info(self, url: str) -> dict:
         ydl_opts = {
+            **get_ydl_runtime_options(),
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
@@ -588,6 +586,7 @@ class SubtitleExtractor:
         }
         if _PROXY_URL:
             ydl_opts["proxy"] = _PROXY_URL
+        ydl_opts.update(get_ydl_cookie_option())
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         if not info:

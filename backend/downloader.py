@@ -4,6 +4,8 @@ import shutil
 import yt_dlp
 from typing import Optional
 
+from config import PROXY_URL, get_ydl_cookie_option, get_ydl_runtime_options
+
 
 def _find_ffmpeg_path() -> Optional[str]:
     """查找 ffmpeg 可执行文件路径"""
@@ -22,10 +24,6 @@ class VideoDownloader:
 
     DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 
-    # 代理地址（从环境变量读取，用于访问 YouTube 等需要翻墙的平台）
-    PROXY_URL = os.getenv("PROXY_URL", "")
-
-    # 通用浏览器请求头，降低被反爬拦截概率
     BROWSER_HEADERS = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -42,10 +40,10 @@ class VideoDownloader:
         self.has_ffmpeg = self.ffmpeg_path is not None
 
     def _base_ydl_opts(self) -> dict:
-        """构建 yt-dlp 公共选项（含代理）"""
         opts = {"http_headers": dict(self.BROWSER_HEADERS)}
-        if self.PROXY_URL:
-            opts["proxy"] = self.PROXY_URL
+        if PROXY_URL:
+            opts["proxy"] = PROXY_URL
+        opts.update(get_ydl_cookie_option())
         return opts
 
     @staticmethod
@@ -73,13 +71,14 @@ class VideoDownloader:
         return f"{minutes}:{secs:02d}"
 
     def parse_video(self, url: str) -> dict:
-        """解析视频信息，不下载文件"""
         ydl_opts = {
             **self._base_ydl_opts(),
+            **get_ydl_runtime_options(),
             "quiet": True,
             "no_warnings": True,
             "extract_flat": False,
             "noplaylist": True,
+            "format": "bv*+ba/b",
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
