@@ -50,7 +50,7 @@ class UpdateSubscriptionRequest(BaseModel):
 
 
 class GenerateReportRequest(BaseModel):
-    time_range_hours: int = 24
+    time_range_hours: int = 72
 
 
 # ============================================================

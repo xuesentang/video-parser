@@ -282,7 +282,7 @@ def get_creator_info(url: str) -> CreatorInfo:
     raise ValueError("获取B站UP主信息失败（2种方案均失败），请稍后重试")
 
 
-def get_recent_videos(mid: str, hours: int = 24, creator_name: str = "") -> list[VideoItem]:
+def get_recent_videos(mid: str, hours: int = 72, creator_name: str = "") -> list[VideoItem]:
     """
     获取UP主近期视频列表。
 

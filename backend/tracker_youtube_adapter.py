@@ -182,12 +182,26 @@ def get_creator_info(url: str) -> CreatorInfo:
     except ValueError:
         raise
     except Exception as e:
-        raise ValueError(f"获取YouTube频道信息失败: {e}")
+        logger.warning("RSS获取频道信息失败: %s，尝试yt-dlp降级", e)
+        # RSS失败时降级到yt-dlp
+        try:
+            from tracker_youtube_ytdlp import get_creator_info as ytdlp_get_creator_info
+            creator_info = ytdlp_get_creator_info(url)
+            logger.info("yt-dlp降级获取频道信息成功: %s", creator_info.name)
+            return creator_info
+        except Exception as ytdlp_e:
+            logger.error("yt-dlp降级也失败: %s", ytdlp_e)
+            raise ValueError(f"获取YouTube频道信息失败: RSS错误={e}; yt-dlp错误={ytdlp_e}")
 
 
-def get_recent_videos(channel_id: str, hours: int = 24) -> list[VideoItem]:
+def get_recent_videos(channel_id: str, hours: int = 72) -> list[VideoItem]:
     """
-    通过RSS获取频道近期视频列表（指定小时数内发布的视频）
+    获取频道近期视频列表（指定小时数内发布的视频）
+
+    策略：
+    1. 先尝试RSS方式（速度快，但只返回最近15个视频）
+    2. 如果RSS获取的视频数量不足或 oldest_video 在 cutoff 内，
+       说明可能有更多视频被截断，降级到yt-dlp获取（可获取50个）
     """
     import feedparser
 
@@ -284,8 +298,47 @@ def get_recent_videos(channel_id: str, hours: int = 24) -> list[VideoItem]:
                 description=description,
             ))
 
+        # === 降级策略：如果RSS返回的视频 oldest 仍在 cutoff 内，说明可能有更多视频 ===
+        need_fallback = False
+        if videos:
+            # 按发布时间排序（RSS默认已按时间倒序）
+            oldest_video_time = datetime.fromisoformat(videos[-1].published_at)
+            if oldest_video_time >= cutoff:
+                # 最旧的视频仍在时间范围内，但被RSS截断了，需要yt-dlp补充
+                need_fallback = True
+                logger.info(
+                    "RSS返回%d个视频，但最旧视频(%s)仍在%d小时cutoff(%s)内，"
+                    "降级到yt-dlp获取完整列表",
+                    len(videos),
+                    oldest_video_time.strftime("%Y-%m-%d %H:%M"),
+                    hours,
+                    cutoff.strftime("%Y-%m-%d %H:%M"),
+                )
+        else:
+            # RSS没有返回任何视频，可能是RSS问题，尝试yt-dlp
+            need_fallback = True
+            logger.info("RSS未返回视频，尝试yt-dlp降级方案")
+
+        if need_fallback:
+            try:
+                from tracker_youtube_ytdlp import get_recent_videos as ytdlp_get_videos
+                ytdlp_videos = ytdlp_get_videos(channel_id, hours=hours)
+                if ytdlp_videos:
+                    logger.info("yt-dlp成功获取%d个视频，替换RSS结果", len(ytdlp_videos))
+                    return ytdlp_videos
+            except Exception as e:
+                logger.warning("yt-dlp降级获取失败: %s，继续使用RSS结果", e)
+
         return videos
 
     except Exception as e:
         logger.error("获取YouTube频道视频失败 channel_id=%s: %s", channel_id, e)
+        # RSS完全失败时，尝试yt-dlp降级
+        try:
+            from tracker_youtube_ytdlp import get_recent_videos as ytdlp_get_videos
+            ytdlp_videos = ytdlp_get_videos(channel_id, hours=hours)
+            logger.info("RSS失败后yt-dlp降级成功，获取%d个视频", len(ytdlp_videos))
+            return ytdlp_videos
+        except Exception as ytdlp_e:
+            logger.error("yt-dlp降级也失败: %s", ytdlp_e)
         return []

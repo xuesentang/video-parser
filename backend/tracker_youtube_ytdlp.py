@@ -93,18 +93,23 @@ def get_recent_videos(channel_id: str, hours: int = 72) -> list[VideoItem]:
     # 计算时间 cutoff
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
+    # 使用频道的 /videos 页面获取视频列表
+    channel_videos_url = f"{channel_url}/videos"
+
     ydl_opts = {
         'quiet': True,
         'extract_flat': False,  # 需要完整信息包括发布时间
         'skip_download': True,
         'playlistend': 50,  # 最多获取50个视频
+        'ignoreerrors': True,  # 忽略单个视频错误（如私有视频）
+        'no_warnings': True,  # 减少警告输出
     }
 
     videos = []
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(channel_url, download=False)
+            info = ydl.extract_info(channel_videos_url, download=False)
 
             entries = info.get('entries', [])
             if not entries:
@@ -115,16 +120,38 @@ def get_recent_videos(channel_id: str, hours: int = 72) -> list[VideoItem]:
                 if not entry:
                     continue
 
+                # 过滤非视频条目（如频道导航标签）
+                entry_type = entry.get('_type', '')
+                if entry_type == 'url' and not entry.get('id', '').startswith('UC'):
+                    # 可能是导航链接，跳过
+                    pass
+
+                video_id = entry.get('id', '')
+                title = entry.get('title', '未知标题')
+
+                # 跳过频道导航标签
+                if title in ('Videos', 'Shorts', 'Live', 'Playlists', 'Community', 'Channels', 'About'):
+                    logger.debug("跳过频道导航标签: %s", title)
+                    continue
+
+                # 跳过没有有效video_id的条目
+                if not video_id or len(video_id) != 11:
+                    logger.debug("跳过无效video_id条目: %s", title)
+                    continue
+
                 # 提取发布时间
                 upload_date_str = entry.get('upload_date', '')  # 格式: YYYYMMDD
                 published_at = _parse_upload_date(upload_date_str)
 
+                # 如果没有upload_date，尝试从webpage_url提取
+                if not published_at:
+                    # 有些条目可能没有upload_date，尝试其他方式
+                    logger.debug("条目无upload_date: %s", title)
+                    continue
+
                 # 过滤时间范围
                 if published_at and published_at < cutoff:
                     continue
-
-                video_id = entry.get('id', '')
-                title = entry.get('title', '未知标题')
 
                 # 构建视频URL
                 url = entry.get('webpage_url', f"https://www.youtube.com/watch?v={video_id}")
@@ -164,7 +191,11 @@ def get_recent_videos(channel_id: str, hours: int = 72) -> list[VideoItem]:
 
 
 def _parse_upload_date(date_str: str) -> datetime | None:
-    """解析yt-dlp的upload_date格式 (YYYYMMDD)"""
+    """解析yt-dlp的upload_date格式 (YYYYMMDD)
+
+    注意：yt-dlp只返回日期（没有时分秒），为了不过滤掉当天发布的视频，
+    我们将时间设为当天的 23:59:59 UTC。
+    """
     if not date_str or len(date_str) != 8:
         return None
     try:
@@ -172,6 +203,7 @@ def _parse_upload_date(date_str: str) -> datetime | None:
             int(date_str[:4]),
             int(date_str[4:6]),
             int(date_str[6:8]),
+            23, 59, 59,  # 设为当天最后一秒，避免当天视频被过滤
             tzinfo=timezone.utc
         )
     except ValueError:

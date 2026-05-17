@@ -252,7 +252,7 @@ def get_user_subscribed_creators(user_id: int) -> list[dict]:
 # reports CRUD
 # ============================================================
 
-def create_report(user_id: int, report_date: str, time_range_hours: int = 24) -> dict:
+def create_report(user_id: int, report_date: str, time_range_hours: int = 72) -> dict:
     """创建一条报告记录（状态为 generating）"""
     with get_db() as conn:
         cursor = conn.execute(
