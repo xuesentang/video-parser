@@ -9,9 +9,13 @@ services:
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this}
-      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_ID_MONTHLY=${STRIPE_PRICE_ID_MONTHLY:-}
       - PROXY_URL=${PROXY_URL:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8001}
+      - VIP_EMAIL=${VIP_EMAIL:-}
+      - VIP_PASSWORD=${VIP_PASSWORD:-}
     volumes:
       - ./data:/app/backend/data
     restart: unless-stopped

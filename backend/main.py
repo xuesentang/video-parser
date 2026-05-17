@@ -10,6 +10,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from downloader import VideoDownloader
@@ -185,6 +186,11 @@ app.include_router(auth_router)
 app.include_router(payment_router)
 app.include_router(tracker_router)
 app.include_router(batch_router)
+
+# 挂载前端静态文件（生产环境）
+static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
 
 if __name__ == "__main__":
