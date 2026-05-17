@@ -2,14 +2,14 @@
   <Teleport to="body">
     <div v-if="visible" class="fixed inset-0 z-[100] flex items-center justify-center" @click.self="$emit('close')">
       <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="$emit('close')"></div>
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-modal-in">
+      <div class="relative bg-bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-modal-in border border-border">
         <!-- Header -->
         <div class="px-8 pt-8 pb-4">
           <div class="flex items-center justify-between mb-1">
             <h2 class="text-xl font-bold text-text-primary">
               {{ isLogin ? '登录账号' : '注册账号' }}
             </h2>
-            <button @click="$emit('close')" class="p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+            <button @click="$emit('close')" class="p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
               <svg class="w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -30,7 +30,7 @@
                 type="email"
                 required
                 placeholder="your@email.com"
-                class="w-full h-11 px-4 rounded-xl border border-border bg-white text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                class="w-full h-11 px-4 rounded-xl border border-border bg-bg-section text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 :disabled="submitting"
               />
             </div>
@@ -43,7 +43,7 @@
                   required
                   minlength="6"
                   placeholder="至少 6 位密码"
-                  class="w-full h-11 px-4 pr-11 rounded-xl border border-border bg-white text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  class="w-full h-11 px-4 pr-11 rounded-xl border border-border bg-bg-section text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   :disabled="submitting"
                 />
                 <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary cursor-pointer">
@@ -59,8 +59,8 @@
             </div>
           </div>
 
-          <div v-if="error" class="mt-4 p-3 rounded-xl bg-red-50 border border-red-100">
-            <p class="text-sm text-red-600">{{ error }}</p>
+          <div v-if="error" class="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+            <p class="text-sm text-red-400">{{ error }}</p>
           </div>
 
           <button
